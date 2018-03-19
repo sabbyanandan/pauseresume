@@ -1,0 +1,56 @@
+= Pause and Resume at SCSt Source
+
+This sample demonstrates the use of Jolokia to pause and resume a Spring Cloud Stream `Source` application.
+Since we wouldn't know what's producing the messages, it is hard to control it. However, if `@Poller` is used
+in the Source, we could resolve the bean and invoke it's `start` or `stop` definitions to control its operation.
+
+== Start RabbitMQ
+[source,bash]
+----
+sh rabbitmq-server start
+----
+== Build Project
+[source,bash]
+----
+mvn clean install
+----
+
+== Start the Producer
+[source,bash]
+----
+java -jar target/pauseresume-0.0.1-SNAPSHOT.jar
+----
+
+== Start the link:http://repo.spring.io/libs-release/org/springframework/cloud/stream/app/log-sink-rabbit/[Log-sink] Consumer 
+[source,bash]
+----
+java -jar log-sink-rabbit-1.3.1.RELEASE.jar --spring.cloud.stream.bindings.input.destination=pauseresume
+----
+
+== Review Results
+[source,bash,options=nowrap,subs=attributes]
+----
+...
+...
+2018-03-19 12:43:37.368  INFO 56469 --- [HmmzPHxOG11pg-1] log-sink : foo
+2018-03-19 12:43:42.370  INFO 56469 --- [HmmzPHxOG11pg-1] log-sink : foo
+2018-03-19 12:43:47.373  INFO 56469 --- [HmmzPHxOG11pg-1] log-sink : foo
+2018-03-19 12:43:52.377  INFO 56469 --- [HmmzPHxOG11pg-1] log-sink : foo
+...
+...
+----
+
+== Stop Source
+Hit the following endpoint to stop the `@Poller`. The results in the `log-sink` will stop. 
+
+[source]
+----
+http://localhost:8081/actuator/jolokia/exec/org.springframework.integration:type=MessageSource,name=pauseresumeApplication.adapter.inboundChannelAdapter,bean=endpoint/stop
+----
+
+== Start Source
+To resume operation, hit the following endpoint to start the `@Poller`. The results will reappear in `log-sink` logs.
+[source]
+----
+http://localhost:8081/actuator/jolokia/exec/org.springframework.integration:type=MessageSource,name=pauseresumeApplication.adapter.inboundChannelAdapter,bean=endpoint/start
+----
